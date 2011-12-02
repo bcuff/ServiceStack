@@ -1,9 +1,11 @@
+using System;
 using System.Web;
 using System.Xml;
 using ServiceStack.Common.Web;
 using ServiceStack.ServiceHost;
 using ServiceStack.WebHost.Endpoints.Metadata;
 using ServiceStack.WebHost.Endpoints.Support;
+using ServiceStack.WebHost.Endpoints.Utils;
 
 namespace ServiceStack.WebHost.Endpoints
 {
@@ -18,9 +20,19 @@ namespace ServiceStack.WebHost.Endpoints
 	}
 
 	public class Soap12MessageAsyncOneWayHttpHandler
-		: SoapHandler, IHttpHandler
+		: SoapHandler, IHttpAsyncHandler
 	{
-		public Soap12MessageAsyncOneWayHttpHandler() : base(EndpointAttributes.Soap12) { }
+        public Soap12MessageAsyncOneWayHttpHandler() : base(EndpointAttributes.Soap12) { }
+
+        public new IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
+        {
+            return HttpUtils.BeginSynchronousHttpHandler(context, cb, extraData, ProcessRequest);
+        }
+
+        public new void EndProcessRequest(IAsyncResult result)
+        {
+            HttpUtils.EndSynchronousHttpHandler(result);
+        }
 
 		public new void ProcessRequest(HttpContext context)
 		{
@@ -36,9 +48,19 @@ namespace ServiceStack.WebHost.Endpoints
 		}
 	}
 
-	public class Soap12MessageSyncReplyHttpHandler : SoapHandler, IHttpHandler
+	public class Soap12MessageSyncReplyHttpHandler : SoapHandler, IHttpAsyncHandler
 	{
-		public Soap12MessageSyncReplyHttpHandler() : base(EndpointAttributes.Soap12) { }
+        public Soap12MessageSyncReplyHttpHandler() : base(EndpointAttributes.Soap12) { }
+
+        public new IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
+        {
+            return HttpUtils.BeginSynchronousHttpHandler(context, cb, extraData, ProcessRequest);
+        }
+
+        public new void EndProcessRequest(IAsyncResult result)
+        {
+            HttpUtils.EndSynchronousHttpHandler(result);
+        }
 
 		public new void ProcessRequest(HttpContext context)
 		{
@@ -59,5 +81,4 @@ namespace ServiceStack.WebHost.Endpoints
 			}
 		}
 	}
-
 }

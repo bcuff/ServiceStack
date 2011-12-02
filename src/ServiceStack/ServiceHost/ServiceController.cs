@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.ServiceModel.Serialization;
 using ServiceStack.Text;
+using ServiceStack.DataAnnotations;
 
 namespace ServiceStack.ServiceHost
 {
 	public class ServiceController
-		: IServiceController
+		: IAsyncServiceController
 	{
 		private static readonly ILog Log = LogManager.GetLogger(typeof(ServiceController));
 		private const string ResponseDtoSuffix = "Response";
@@ -31,6 +33,9 @@ namespace ServiceStack.ServiceHost
 
 		readonly Dictionary<Type, ServiceAttribute> requestServiceAttrs
 			= new Dictionary<Type, ServiceAttribute>();
+
+        readonly Dictionary<Type, bool> requestIsAsyncMap
+            = new Dictionary<Type, bool>();
 
 		private readonly ServiceRoutes routes;
 
@@ -249,6 +254,9 @@ namespace ServiceStack.ServiceHost
 			{
 				requestServiceAttrs.Add(requestType, (ServiceAttribute)serviceAttrs[0]);
 			}
+
+            bool isAsync = Attribute.IsDefined(serviceType, typeof(AsyncServiceAttribute), true);
+            requestIsAsyncMap.Add(requestType, isAsync);
 		}
 
 		private static void InjectRequestContext(object service, IRequestContext requestContext)
@@ -297,7 +305,7 @@ namespace ServiceStack.ServiceHost
 			}
 		}
 
-		public object Execute(object dto)
+        public object Execute(object dto)
 		{
 			return Execute(dto, null);
 		}
@@ -313,8 +321,87 @@ namespace ServiceStack.ServiceHost
 			}
 
 			var handlerFn = GetService(requestType);
-			return handlerFn(requestContext, request);
+
+			var response = handlerFn(requestContext, request);
+
+            var proxy = TaskProxy.GetProxy(response);
+
+            if (proxy != null)
+            {
+                // just wait on the task
+                return proxy.Result;
+            }
+
+            return response;
 		}
+
+        public void ExecuteAsync(object request, IRequestContext requestContext, Action<object, Exception> callback)
+        {
+            var requestType = request.GetType();
+
+            if (EnableAccessRestrictions)
+            {
+                AssertServiceRestrictions(requestType,
+                    requestContext != null ? requestContext.EndpointAttributes : EndpointAttributes.None);
+            }
+
+            var handlerFn = GetService(requestType);
+
+            bool isAsync;
+            requestIsAsyncMap.TryGetValue(requestType, out isAsync);
+            if (isAsync)
+            {
+                ExecuteServiceHandlerWithCallback(request, requestContext, callback, handlerFn);
+            }
+            else
+            {
+                ThreadPool.QueueUserWorkItem(o => ExecuteServiceHandlerWithCallback(request, requestContext, callback, handlerFn));
+            }
+        }
+
+        private void ExecuteServiceHandlerWithCallback(object request, IRequestContext requestContext, Action<object, Exception> callback, Func<IRequestContext, object, object> handlerFn)
+        {
+            object result;
+            try
+            {
+                result = handlerFn(requestContext, request);
+            }
+            catch (Exception ex)
+            {
+                callback(null, ex);
+                return;
+            }
+
+            var proxy = result != null ? TaskProxy.GetProxy(result) : null;
+
+            if (proxy == null)
+            {
+                callback(result, null);
+                return;
+            }
+
+            var ar = (IAsyncResult)result;
+            RegisteredWaitHandle registeredWaitHandle = null;
+            registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(ar.AsyncWaitHandle, (state, timedOut) =>
+            {
+                object finalResult = null;
+                Exception error = null;
+                try
+                {
+                    finalResult = proxy.Result;
+                }
+                catch (Exception ex)
+                {
+                    error = ex;
+                }
+                finally
+                {
+                    callback(finalResult, error);
+                    if (registeredWaitHandle != null) registeredWaitHandle.Unregister(null);
+                    using (ar as IDisposable) { }
+                }
+            }, null, Timeout.Infinite, true);
+        }
 
 		public Func<IRequestContext, object, object> GetService(Type requestType)
 		{
@@ -370,6 +457,6 @@ namespace ServiceStack.ServiceHost
 				string.Format("Could not execute service '{0}', The following restrictions were not met: '{1}'" + internalDebugMsg,
 					requestType.Name, failedScenarios));
 		}
-	}
+    }
 
 }

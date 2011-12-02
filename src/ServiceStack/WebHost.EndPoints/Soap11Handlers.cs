@@ -1,8 +1,11 @@
-﻿using System.ServiceModel.Channels;
+﻿using System;
+using System.ServiceModel.Channels;
+using System.Threading;
 using System.Web;
 using System.Xml;
 using ServiceStack.Common.Web;
 using ServiceStack.ServiceHost;
+using ServiceStack.WebHost.Endpoints.Utils;
 using ServiceStack.WebHost.Endpoints.Metadata;
 using ServiceStack.WebHost.Endpoints.Support;
 
@@ -31,9 +34,19 @@ namespace ServiceStack.WebHost.Endpoints
 		}
 	}
 
-	public class Soap11MessageSyncReplyHttpHandler : SoapHandler, IHttpHandler
+	public class Soap11MessageSyncReplyHttpHandler : SoapHandler, IHttpAsyncHandler
 	{
 		public Soap11MessageSyncReplyHttpHandler() : base(EndpointAttributes.Soap11) {}
+
+        public new IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
+        {
+            return HttpUtils.BeginSynchronousHttpHandler(context, cb, extraData, ProcessRequest);
+        }
+
+        public new void EndProcessRequest(IAsyncResult result)
+        {
+            HttpUtils.EndSynchronousHttpHandler(result);
+        }
 
 		public new void ProcessRequest(HttpContext context)
 		{

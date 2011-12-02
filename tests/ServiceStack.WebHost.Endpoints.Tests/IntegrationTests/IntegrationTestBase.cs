@@ -13,7 +13,7 @@ namespace ServiceStack.WebHost.Endpoints.Tests.IntegrationTests
 	public class IntegrationTestBase
 		: AppHostHttpListenerBase
 	{
-		protected const string BaseUrl = "http://localhost:8081/";
+		protected readonly string BaseUrl = "http://localhost:8081/";
 
 		//Fiddler can debug local HTTP requests when using the hostname
 		//private const string BaseUrl = "http://io:8081/";
@@ -79,7 +79,7 @@ namespace ServiceStack.WebHost.Endpoints.Tests.IntegrationTests
 			{
 				xmlClient.HttpMethod = httpMethod;
 				jsonClient.HttpMethod = httpMethod;
-				jsvClient.HttpMethod = httpMethod;
+                jsvClient.HttpMethod = httpMethod;
 
 				var xmlResponse = xmlClient.Send<TRes>(request);
 				if (validate != null) validate(xmlResponse);
@@ -87,10 +87,25 @@ namespace ServiceStack.WebHost.Endpoints.Tests.IntegrationTests
 				var jsonResponse = jsonClient.Send<TRes>(request);
 				if (validate != null) validate(jsonResponse);
 
-				var jsvResponse = jsvClient.Send<TRes>(request);
-				if (validate != null) validate(jsvResponse);
+                var jsvResponse = jsvClient.Send<TRes>(request);
+                if (validate != null) validate(jsvResponse);
 			}
 		}
+
+        /// <summary>
+        /// Runs the request against the specified endpoint.
+        /// </summary>
+        /// <typeparam name="TRes">The type of the res.</typeparam>
+        /// <param name="client">The client.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="httpMethod">The HTTP method.</param>
+        /// <param name="validate">The validate method.</param>
+        public void SendToEndpoint<TRes>(ServiceClientBase client, object request, string httpMethod, Action<TRes> validate)
+        {
+            client.HttpMethod = httpMethod;
+            var response = client.Send<TRes>(request);
+            if(validate != null) validate(response);
+        }
 
 		public void DeleteOnEachEndpoint<TRes>(string relativePathOrAbsoluteUri, Action<TRes> validate)
 		{

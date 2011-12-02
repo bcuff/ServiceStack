@@ -180,5 +180,10 @@ namespace ServiceStack.WebHost.Endpoints
 				new HttpRequestContext(httpReq, request, endpointAttributes));
 		}
 
+        internal static void ExecuteServiceAsync(object request, EndpointAttributes endpointAttributes, IHttpRequest httpReq, Action<object, Exception> callback)
+        {
+            config.ServiceController.ExecuteAsync(request,
+                new HttpRequestContext(httpReq, request, endpointAttributes), callback);
+        }
 	}
 }

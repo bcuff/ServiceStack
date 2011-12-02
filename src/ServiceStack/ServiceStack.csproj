@@ -161,11 +161,13 @@
     <Compile Include="ServiceHost\ServiceManager.cs" />
     <Compile Include="ServiceHost\ServiceOperations.cs" />
     <Compile Include="ServiceHost\ServiceRoutes.cs" />
+    <Compile Include="ServiceHost\TaskProxy.cs" />
     <Compile Include="WebHost.EndPoints\AppHostBase.cs" />
     <Compile Include="WebHost.EndPoints\Extensions\HttpResponseStreamExtensions.cs" />
     <Compile Include="WebHost.EndPoints\Formats\CsvFormat.cs" />
     <Compile Include="WebHost.EndPoints\Extensions\HttpListenerRequestWrapper.cs" />
     <Compile Include="WebHost.EndPoints\AppDelegates.cs" />
+    <Compile Include="WebHost.EndPoints\Support\DoneAsyncResult.cs" />
     <Compile Include="WebHost.EndPoints\Support\Markdown\Evaluator.cs" />
     <Compile Include="WebHost.EndPoints\Support\Markdown\ITemplateWriter.cs" />
     <Compile Include="WebHost.EndPoints\Support\Markdown\Markdown.cs" />
@@ -211,6 +213,7 @@
     <Compile Include="WebHost.EndPoints\Support\Metadata\WsdlMetadataHandlerBase.cs" />
     <Compile Include="WebHost.EndPoints\Support\IndexPageHttpHandler.cs" />
     <Compile Include="WebHost.EndPoints\Support\RequestInfoHandler.cs" />
+    <Compile Include="WebHost.EndPoints\Support\SimpleAsyncResult.cs" />
     <Compile Include="WebHost.EndPoints\Support\StaticFileHandler.cs" />
     <Compile Include="WebHost.EndPoints\Support\Templates\Soap12WsdlTemplate.cs" />
     <Compile Include="WebHost.EndPoints\Metadata\Soap11WsdlMetadataHandler.cs" />
@@ -222,6 +225,7 @@
     <Compile Include="WebHost.EndPoints\EndpointHost.cs" />
     <Compile Include="WebHost.EndPoints\EndpointHostConfig.cs" />
     <Compile Include="WebHost.EndPoints\Support\SoapHandler.cs" />
+    <Compile Include="WebHost.EndPoints\Utils\HttpUtils.cs" />
     <Compile Include="WebHost.EndPoints\WebServerType.cs" />
     <Compile Include="WebHost.EndPoints\XmlSyncReplyHandler.cs" />
     <Compile Include="WebHost.EndPoints\Metadata\IndexMetadataHandler.cs" />

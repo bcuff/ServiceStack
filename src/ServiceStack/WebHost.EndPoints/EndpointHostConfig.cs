@@ -235,7 +235,7 @@ namespace ServiceStack.WebHost.Endpoints
 		}
 
 		public ServiceManager ServiceManager { get; internal set; }
-		public IServiceController ServiceController { get { return ServiceManager.ServiceController; } }
+		public IAsyncServiceController ServiceController { get { return ServiceManager.ServiceController; } }
 		public string MetadataPageBodyHtml { get; set; }
 		public string MetadataOperationPageBodyHtml { get; set; }
 

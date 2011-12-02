@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Web;
 using ServiceStack.Common.Extensions;
 using ServiceStack.Common.Web;
@@ -15,7 +16,7 @@ using ServiceStack.WebHost.Endpoints.Extensions;
 namespace ServiceStack.WebHost.Endpoints.Support
 {
 	public abstract class EndpointHandlerBase 
-		: IServiceStackHttpHandler, IHttpHandler
+		: IServiceStackHttpHandler, IHttpAsyncHandler
 	{
 		private static readonly ILog Log = LogManager.GetLogger(typeof(EndpointHandlerBase));
 		private static readonly Dictionary<byte[], byte[]> NetworkInterfaceIpv4Addresses = new Dictionary<byte[], byte[]>();
@@ -46,6 +47,31 @@ namespace ServiceStack.WebHost.Endpoints.Support
 
 		public abstract object CreateRequest(IHttpRequest request, string operationName);
 		public abstract object GetResponse(IHttpRequest httpReq, object request);
+
+        public virtual void ProcessRequestAsync(IHttpRequest httpReq, IHttpResponse httpRes, string operationName, Action<Exception> callback)
+        {
+            var context = HttpContext.Current;
+            ThreadPool.QueueUserWorkItem(o =>
+            {
+                Exception error = null;
+                // in case something depends on HttpContext.Current
+                HttpContext.Current = context;
+                try
+                {
+                    ProcessRequest(httpReq, httpRes, operationName);
+                }
+                catch (Exception ex)
+                {
+                    // todo - preserve stack trace
+                    error = ex;
+                }
+                finally
+                {
+                    HttpContext.Current = null;
+                    callback(error);
+                }
+            });
+        }
 
 		public virtual void ProcessRequest(IHttpRequest httpReq, IHttpResponse httpRes, string operationName)
 		{
@@ -125,20 +151,64 @@ namespace ServiceStack.WebHost.Endpoints.Support
 			}
 
 			return false;
-		}
+        }
+
+        [ThreadStatic]
+        static bool _runningRequest;
+
+        private class EndpointHandlerBaseAsyncResult : SimpleAsyncResult
+        {
+            public EndpointHandlerBaseAsyncResult(AsyncCallback callback, object state) : base(callback, state) { }
+
+            public Exception Error { get; set; }
+        }
+
+        public IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
+        {
+			var operationName = this.RequestName ?? context.Request.GetOperationName();
+
+            if (string.IsNullOrEmpty(operationName)) return new DoneAsyncResult(extraData);
+
+            if (DefaultHandledRequest(context)) return new DoneAsyncResult(extraData);
+
+            var result = new EndpointHandlerBaseAsyncResult(cb, extraData);
+            var reqWrapper = new HttpRequestWrapper(operationName, context.Request);
+            var resWrapper = new HttpResponseWrapper(context.Response);
+            _runningRequest = true;
+            try
+            {
+                ProcessRequestAsync(reqWrapper, resWrapper, operationName, error =>
+                {
+                    result.Error = error;
+                    result.SetComplete(_runningRequest);
+                });
+            }
+            finally
+            {
+                _runningRequest = false;
+            }
+
+            return result;
+        }
+
+        public void EndProcessRequest(IAsyncResult result)
+        {
+            if (result is DoneAsyncResult) return;
+            var simpleResult = (EndpointHandlerBaseAsyncResult)result;
+            if (!simpleResult.IsCompleted)
+            {
+                simpleResult.AsyncWaitHandle.WaitOne();
+            }
+            if (simpleResult.Error != null)
+            {
+                throw simpleResult.Error;
+            }
+        }
 
 		public virtual void ProcessRequest(HttpContext context)
 		{
-			var operationName = this.RequestName ?? context.Request.GetOperationName();
-
-			if (string.IsNullOrEmpty(operationName)) return;
-
-			if (DefaultHandledRequest(context)) return;
-
-			ProcessRequest(
-				new HttpRequestWrapper(operationName, context.Request),
-				new HttpResponseWrapper(context.Response),
-				operationName);
+            var ar = BeginProcessRequest(context, null, null);
+            EndProcessRequest(ar);
 		}
 
 		public virtual void ProcessRequest(HttpListenerContext context)
@@ -168,6 +238,11 @@ namespace ServiceStack.WebHost.Endpoints.Support
 		{
 			return EndpointHost.ExecuteService(request, endpointAttributes, httpReq);
 		}
+
+        protected static void ExecuteServiceAsync(object request, EndpointAttributes endpointAttributes, IHttpRequest httpReq, Action<object, Exception> callback)
+        {
+            EndpointHost.ExecuteServiceAsync(request, endpointAttributes, httpReq, callback);
+        }
 
 		public EndpointAttributes GetEndpointAttributes(System.ServiceModel.OperationContext operationContext)
 		{
@@ -298,6 +373,5 @@ namespace ServiceStack.WebHost.Endpoints.Support
 				throw ex;
 			}
 		}
-	
-	}
+    }
 }

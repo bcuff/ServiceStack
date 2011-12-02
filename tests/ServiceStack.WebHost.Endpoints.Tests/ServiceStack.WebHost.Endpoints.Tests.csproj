@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ServiceStack.WebHost.Endpoints.Tests</RootNamespace>
     <AssemblyName>ServiceStack.WebHost.Endpoints.Tests</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -31,6 +31,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -124,6 +125,11 @@
     <Compile Include="AsyncServiceClientTests.cs" />
     <Compile Include="CompressionTests.cs" />
     <Compile Include="HttpResultContentTypeTests.cs" />
+    <Compile Include="IntegrationTests\Demo.cs" />
+    <Compile Include="IntegrationTests\DemoAsyncService.cs" />
+    <Compile Include="IntegrationTests\DemoRequest.cs" />
+    <Compile Include="IntegrationTests\DemoResponse.cs" />
+    <Compile Include="IntegrationTests\DemoRestTests.cs" />
     <Compile Include="RemoteEndDropsConnectionTests.cs" />
     <Compile Include="IocServiceTests.cs" />
     <Compile Include="Support\EndpointHandlerBaseTests.cs" />
@@ -226,6 +232,7 @@
       <Link>sqlite3.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="App.config" />
     <None Include="webpage.forbidden" />
     <Content Include="webpage.html" />
     <Content Include="TestExistingDir\default.html" />
