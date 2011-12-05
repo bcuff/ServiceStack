@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Web;
 using ServiceStack.Configuration;
 using ServiceStack.Logging;
 using ServiceStack.ServiceModel.Serialization;
@@ -355,7 +356,20 @@ namespace ServiceStack.ServiceHost
             }
             else
             {
-                ThreadPool.QueueUserWorkItem(o => ExecuteServiceHandlerWithCallback(request, requestContext, callback, handlerFn));
+                var context = HttpContext.Current;
+                ThreadPool.QueueUserWorkItem(o =>
+                {
+                    var oldContext = HttpContext.Current;
+                    HttpContext.Current = context;
+                    try
+                    {
+                        ExecuteServiceHandlerWithCallback(request, requestContext, callback, handlerFn);
+                    }
+                    finally
+                    {
+                        HttpContext.Current = oldContext;
+                    }
+                });
             }
         }
 
